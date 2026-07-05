@@ -1,0 +1,76 @@
+classDiagram
+    class Task {
+        +str title
+        +int duration_minutes
+        +str priority
+        +str frequency
+        +bool completed
+        +Optional~int~ earliest_minute
+        +bool due
+        +Optional~date~ due_date
+        +is_high_priority() bool
+        +is_pinned() bool
+        +is_recurring() bool
+        +mark_done() None
+        +next_occurrence(today) Optional~Task~
+    }
+
+    class ScheduledTask {
+        +Task task
+        +int start_minute
+        +end_minute() int
+        +start_time_str() str
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +int age
+        +Optional~Owner~ owner
+        +list~Task~ tasks
+        +add_task(task) None
+        +complete_task(task, today) Optional~Task~
+        +get_tasks(completed) list~Task~
+        +get_needs() list~Task~
+    }
+
+    class Owner {
+        +str name
+        +str email
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +get_tasks(pet, completed) list
+        +get_all_tasks() list
+        +filter_tasks(pet_name, completed) list
+    }
+
+    class Scheduler {
+        +Owner owner
+        +Pet pet
+        +list~Task~ tasks
+        +int available_minutes
+        +int start_minute
+        +str sort_by
+        +set include_frequencies
+        +sort_by_time() list~Task~
+        +generate_schedule() list~ScheduledTask~
+        +detect_conflicts() list~str~
+        +find_time_conflicts(labeled)$ list~str~
+        +detect_conflicts_across(owner, pet)$ list~str~
+        +explain_plan() str
+        -_is_due(task) bool
+        -_collect_tasks() list~Task~
+        -_sort_key(task) tuple
+        -_build() tuple
+        -_conflicts_from(schedule, skipped)$ list~str~
+    }
+
+    Owner "1" o-- "*" Pet : owns
+    Pet "*" --> "1" Owner : back-reference
+    Pet "1" o-- "*" Task : has tasks
+    ScheduledTask "1" --> "1" Task : wraps
+    Task ..> Task : next_occurrence creates
+    Scheduler --> Owner : uses
+    Scheduler --> Pet : schedules for
+    Scheduler ..> Task : orders
+    Scheduler ..> ScheduledTask : produces
