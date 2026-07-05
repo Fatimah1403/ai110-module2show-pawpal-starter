@@ -30,8 +30,14 @@ Yes, two changes were made after reviewing the skeleton:
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+One deliberate tradeoff is in **conflict detection: it only inspects *pinned* tasks** — those given an explicit `earliest_minute` — and it *reports* overlaps as warnings rather than automatically resolving them.
+
+`detect_conflicts_across()` builds each pinned task's intended window (`earliest_minute` → `earliest_minute + duration_minutes`) and flags any two whose windows overlap, within one pet or across pets. This is a genuine overlap check on *durations*, not just exact start-time matches — an 8:00 AM walk and an 8:15 AM feeding still collide. But it makes two intentional simplifications:
+
+1. **Unpinned tasks are ignored by the cross-pet check.** A task with no requested time has no fixed window to compare, so it can't "conflict" until the per-pet scheduler places it. The greedy `_build()` then sequences those tasks back-to-back, so within a single pet they never overlap by construction.
+2. **Conflicts are surfaced, not auto-fixed.** When two pets are both booked at 8:00 AM, the scheduler warns the owner instead of silently moving one, because it can't know which pet the owner would rather delay.
+
+**Why it's reasonable here:** the app is a *planning aid* for a human owner, not an autonomous dispatcher. Pinned tasks are exactly the ones with real-world time constraints (a morning walk, a medication window), so those are where a missed conflict actually hurts. Keeping the check pinned-only keeps it lightweight and O(n log n) after sorting, and it never raises — it just returns warning strings — so a conflict degrades into a helpful message rather than a crash. Leaving the final call to the owner respects that they have context (which pet is more flexible today) that the scheduler doesn't.
 
 ---
 

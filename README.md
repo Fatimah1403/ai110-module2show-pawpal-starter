@@ -94,14 +94,30 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+PawPal+ goes beyond a flat task list with four scheduling features. Each is implemented in `pawpal_system.py`:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time()`, `Scheduler._sort_key()` | Chronological or priority order |
+| Filtering | `Owner.filter_tasks()`, `Pet.get_tasks()` | By pet name and/or completion status |
+| Conflict detection | `Scheduler.detect_conflicts_across()`, `Scheduler.find_time_conflicts()` | Overlapping time windows |
+| Recurring tasks | `Task.next_occurrence()`, `Pet.complete_task()` | Auto-respawn daily / weekly |
+
+### Sorting behavior
+
+Tasks can be ordered by their pinned start time via **`Scheduler.sort_by_time()`**, which sorts on each task's `earliest_minute` (minutes from midnight) and pushes unpinned tasks to the end. The scheduler can also place tasks in priority order — a `sort_by="priority" | "time"` switch drives the ordering key in **`Scheduler._sort_key()`**, used by **`Scheduler._build()`** when laying out the day.
+
+### Filtering behavior
+
+**`Owner.filter_tasks(pet_name=None, completed=None)`** returns `(pet, task)` pairs filtered by pet name (case-insensitive) and/or completion status, so an owner can ask for "just Mochi's tasks" or "everything still pending." At the pet level, **`Pet.get_tasks(completed=...)`** filters one pet's tasks by status, and **`Pet.get_needs()`** is the pending-only shortcut the scheduler relies on.
+
+### Conflict detection
+
+**`Scheduler.detect_conflicts_across(owner, pet=None)`** flags pinned tasks whose time windows collide — within one pet or across the whole household (so "Mochi at 8:00" vs "Luna at 8:00" surfaces). It delegates the pairwise overlap check to **`Scheduler.find_time_conflicts()`**, a pure function that sorts by start time, compares `[start, end)` windows, and returns warning strings (never raises). Separately, **`Scheduler.detect_conflicts()`** reports tasks that were delayed past their requested time or dropped for not fitting the available window.
+
+### Recurring task logic
+
+When a repeating task is completed via **`Pet.complete_task(task)`**, the next occurrence is created automatically. **`Task.next_occurrence()`** computes the new `due_date` by adding one interval — `timedelta(days=1)` for daily, `timedelta(weeks=1)` for weekly (see the `FREQUENCY_DELTA` table) — and returns a fresh, uncompleted copy. One-off (`as_needed`) tasks return `None` and don't respawn. **`Task.is_recurring()`** is the guard that distinguishes the two.
 
 ## 📸 Demo Walkthrough
 
